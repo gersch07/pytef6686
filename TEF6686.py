@@ -341,16 +341,18 @@ class TEF6686:
         self.__MOD_FOUND__ = False
         self.__TUNER_STATUS__ = None
         
-        self.RF_LEVEL = 0
         self.RDS_ON = False
         self.RDS_TP = False
         self.RDS_PTY = ''
-        self.VOLUME = 0
+        self.VOLUME_GAIN = 0                                       # default volume gain: 0dB
         self.RDS_ACQUIRING = False
         self.RDS_ACQUIRED = False
-        self.RDS_PS = '--------'
+        
         self.RDS_PI = '----'
         self.RDS_PI_CHECK = '----'
+        self.RDS_PI_list = []
+        
+        self.RDS_PS = '--------'
         self.RDS_PS_OFFSET_0 = False
         self.RDS_PS_OFFSET_1 = False
         self.RDS_PS_OFFSET_2 = False
@@ -380,8 +382,7 @@ class TEF6686:
         else:
             print("Unsupported I2C host device!")
         
-        if not self.__DEVICE__ == 'RPi':
-            self.search_module()
+        self.search_module()
 
 
     def i2c_write_line(self, line):
@@ -407,22 +408,39 @@ class TEF6686:
             return RESULT_ARRAY
 
         
-    def search_module(self):
+    def search_module(self, dbg = False):
+        
+        print("Searching for tuner module at I2C adress ", hex(I2C_TEF6686),"...")
         
         if self.__DEVICE__ == 'ESP32':
-            print("Searching for I2C devices...")
+            
             I2C_DEVICES = None
             I2C_DEVICES = self.__i2c__.scan()
-            
-            for dev in I2C_DEVICES:
-                if hex(dev) == hex(I2C_TEF6686):
-                    print("Tuner module detected!")
-                    self.__MOD_FOUND__ = True
-                else:
-                    print("!!! ERROR !!! Module not detected")
                     
         elif self.__DEVICE__ == 'RPi':
-            print("I2C scan not implemented for Raspberry Pi!")
+            
+            I2C_DEVICES = []
+            
+            for address in range(128):
+                
+                try:
+                    self.__i2c__.read_byte(address)
+                    I2C_DEVICES.append(address)
+                except:                       # exception if read_byte fails
+                    pass
+                
+        if dbg == True:
+            print(I2C_DEVICES)
+        
+        if I2C_DEVICES == []:
+            raise OSError('Tuner module not detected, check I2C wiring!')
+    
+        for dev in I2C_DEVICES:
+            if hex(dev) == hex(I2C_TEF6686):
+                print("Tuner module detected!")
+                self.__MOD_FOUND__ = True
+            else:
+                raise OSError('Tuner module not detected, check I2C wiring!')
         
         
     @classmethod
@@ -499,11 +517,17 @@ class TEF6686:
         self.RDS_PI_CHECK = '----'
         
     
-    def set_volume(self, VOLUME):
+    def set_volume_gain(self, VOLUME_GAIN = 0, dbg = False):                      # sets volume GAIN(!): -599 to +240 possible (default: 0)
         
-        self.VOLUME = VOLUME
-        print("Setting volume to ", self.VOLUME, "...")
-        self.i2c_write_line(b'\x05\x30\x0A\x01\x00\x32')
+        self.VOLUME_GAIN = VOLUME_GAIN
+        print("Setting volume to ", self.VOLUME_GAIN, "...")
+        VOL_BYTE_ARRAY = b''
+        VOL_BYTE_ARRAY += b'\x05\x30\x0A\x01'
+        VOL_BYTE_ARRAY += self.VOLUME_GAIN.to_bytes(2, byteorder = 'big', signed = True)
+        if dbg == True:
+            print(VOL_BYTE_ARRAY)
+            
+        self.i2c_write_line(VOL_BYTE_ARRAY)
         
         
     def check_module_status(self):
@@ -553,89 +577,102 @@ class TEF6686:
         print(RF_level, " dBµV, Stereo: ", FM_stereo, " RDS: ", RDS_available)
         
         return RF_level, FM_stereo, RDS_available
-            
-            
-    def get_RDS_data(self, pause_time = 87, dbg = False):
     
-        self.i2c_write_line(b'\x03\x20\x83\x01')              # get all available RDS info               
-        result = self.i2c_read(12)                            # example: b'\xc2\x00\xde\x1f\x04\x0f\xcb\xcdM \x00\x00\x00\x15\xde\xad'
+            
+    def get_RDS_data(self, pause_time = 30, dbg = False):
+    
+        self.i2c_write_line(b'\x03\x20\x83\x01')                                            # get all available RDS info               
+        result = self.i2c_read(12)                                                          # according to datasheet: 12 bytes returned, e.g., b'\xc2\x00\xde\x1f\x04\x0f\xcb\xcdM \x00\x00\x00\x15\xde\xad'                                                                        # list to collect PIs from several polls
         
         if dbg == True:
+            print("-----------------------------------------")
             print("Received: ", result, result[0:2])
         
-        if result[0:2] == b'\xC2\x00' or result[0:2] == b'\x82\x00':
-            
-            if self.RDS_ACQUIRING == False:
-                self.RDS_PI = "".join("%02x" % i for i in bytearray(result[2:4]))
-                self.RDS_PI_CHECK = self.RDS_PI
-                print("RDS PI: (1st)", self.RDS_PI)
-                self.RDS_ACQUIRING = True
-                
-            else:
-                self.RDS_PI_CHECK = "".join("%02x" % i for i in bytearray(result[2:4]))
-                print("RDS PI: ", self.RDS_PI_CHECK)
-    
-        RDS_BLOCK_B = self.expand_bin_str( bin(int.from_bytes(result[4:6], 'big')) , 16)
+        RDS_STATUS_DATA = self.expand_bin_str( bin(int.from_bytes(result[0:2], 'big')) , 16)
+        CRC_DATA = self.expand_bin_str( bin(int.from_bytes(result[10:12], 'big')) , 16)
         
-        if self.RDS_ACQUIRING == True and RDS_BLOCK_B[0:5] == '00000':                                                # check if received group is '0A' (containing PS)
+        if result[0:2] == b'\xC2\x00' or result[0:2] == b'\x82\x00':                        # indicates that RDS was successfully decoded
             
-            self.RDS_TP = RDS_BLOCK_B[5]
-            self.RDS_PTY = RDS_BLOCK_B[6:11]
+            self.RDS_ACQUIRING = True
+            if CRC_DATA[0:2] == '00' or CRC_DATA[0:2] == '01':
+                self.RDS_PI = "".join("%02x" % i for i in bytearray(result[2:4]))
             
-            offset = int(RDS_BLOCK_B[-2]) * 2 + int(RDS_BLOCK_B[-1]) * 1                # calculate offset of received PS fraction
+            if dbg == True:
+                print("RDS PI:", self.RDS_PI, " CRC: ", CRC_DATA[0:2])
+
+            RDS_BLOCK_B = self.expand_bin_str( bin(int.from_bytes(result[4:6], 'big')) , 16)
+            BLOCK_B_ERROR = CRC_DATA[2:4]                                                  # check block B error to see if the PS offset is wrong           
+            RDS_BLOCK_D = result[8:10]
+        
+            if self.RDS_ACQUIRING == True and RDS_BLOCK_B[0:5] == '00000':                                                # check if received group is '0A' (containing PS)
                 
-            try:
-                
-                PS_FRACTION = result[8:10].decode('UTF-8')
-                    
-                if offset == 0:
-                    self.RDS_PS = self.RDS_PS[0].replace(self.RDS_PS[0], PS_FRACTION[0]) + self.RDS_PS[1].replace(self.RDS_PS[1], PS_FRACTION[1]) + self.RDS_PS[2:]
-                    if dbg == True:
-                        print("PI old: ", self.RDS_PI_CHECK,"  PI new: ", self.RDS_PI)
-                    if self.RDS_PI_CHECK == self.RDS_PI:                              # only if PI code hasn't changed: mark PS offset as "received"
-                        self.RDS_PS_OFFSET_0 = True
-                        
-                elif offset == 1:
-                    self.RDS_PS = self.RDS_PS[0:2] + self.RDS_PS[2].replace(self.RDS_PS[2], PS_FRACTION[0]) + self.RDS_PS[3].replace(self.RDS_PS[3], PS_FRACTION[1]) + self.RDS_PS[4:]
-                    if dbg == True:
-                        print("PI old: ", self.RDS_PI_CHECK,"  PI new: ", self.RDS_PI)
-                    if self.RDS_PI_CHECK == self.RDS_PI:
-                        self.RDS_PS_OFFSET_1 = True
-                    
-                elif offset == 2:
-                    self.RDS_PS = self.RDS_PS[0:4] + self.RDS_PS[4].replace(self.RDS_PS[4], PS_FRACTION[0]) + self.RDS_PS[5].replace(self.RDS_PS[5], PS_FRACTION[1]) + self.RDS_PS[6:]
-                    if dbg == True:
-                        print("PI old: ", self.RDS_PI_CHECK,"  PI new: ", self.RDS_PI)
-                    if self.RDS_PI_CHECK == self.RDS_PI:
-                        self.RDS_PS_OFFSET_2 = True
-                        
-                else:
-                    self.RDS_PS = self.RDS_PS[0:6] + self.RDS_PS[6].replace(self.RDS_PS[6], PS_FRACTION[0]) + self.RDS_PS[7].replace(self.RDS_PS[7], PS_FRACTION[1])
-                    if dbg == True:
-                        print("PI old: ", self.RDS_PI_CHECK,"  PI new: ", self.RDS_PI)
-                    if self.RDS_PI_CHECK == self.RDS_PI:
-                        self.RDS_PS_OFFSET_3 = True
-            
-                print("PTY: ", self.RDS_PTY)
-                print("TP: ", self.RDS_TP)
-                print("PS name: ", self.RDS_PS, " Parts received: ",self.RDS_PS_OFFSET_0, self.RDS_PS_OFFSET_1, self.RDS_PS_OFFSET_2, self.RDS_PS_OFFSET_3)
-                
-                if self.RDS_ACQUIRING == True and self.RDS_PS_OFFSET_0 == True and self.RDS_PS_OFFSET_1 == True and self.RDS_PS_OFFSET_2 == True and self.RDS_PS_OFFSET_3 == True:
-                    self.RDS_ACQUIRED = True
-                
-            except:                                                                 # this catches unsuccessful decoding of character
                 if dbg == True:
-                    print("Error decoding character...")
-                pass
+                    print("RDS Block 0A detected!")
+                    print("Status data: ", RDS_STATUS_DATA, " CRC data: ", CRC_DATA)
+                
+                if BLOCK_B_ERROR == '00' or BLOCK_B_ERROR == '01':
+                    self.RDS_TP = RDS_BLOCK_B[5]
+                    self.RDS_PTY = RDS_BLOCK_B[6:11]
+            
+                offset = int(RDS_BLOCK_B[-2]) * 2 + int(RDS_BLOCK_B[-1]) * 1                # calculate offset of received PS fraction
+                
+                try:
+                
+                    PS_FRACTION = RDS_BLOCK_D.decode('UTF-8')
+                    PS_ERROR = CRC_DATA[6:8]                      
+                    
+                    if dbg == True:
+                        print("Offset: ", offset, "Error: ", OFFSET_ERROR," Fraction :", PS_FRACTION, " Error: ", PS_ERROR)
+                    
+                    if PS_ERROR == '00' or PS_ERROR == '01':                               # acceptable PS error (either none or corrected)
+                        if offset == 0 and self.RDS_PS_OFFSET_0 == False:
+                            self.RDS_PS = self.RDS_PS[0].replace(self.RDS_PS[0], PS_FRACTION[0]) + self.RDS_PS[1].replace(self.RDS_PS[1], PS_FRACTION[1]) + self.RDS_PS[2:]
+                            if BLOCK_B_ERROR == '00' or OFFSET_ERROR == '01':
+                                self.RDS_PS_OFFSET_0 = True
+                        
+                        elif offset == 1 and self.RDS_PS_OFFSET_1 == False:
+                            self.RDS_PS = self.RDS_PS[0:2] + self.RDS_PS[2].replace(self.RDS_PS[2], PS_FRACTION[0]) + self.RDS_PS[3].replace(self.RDS_PS[3], PS_FRACTION[1]) + self.RDS_PS[4:]
+                            if BLOCK_B_ERROR == '00' or OFFSET_ERROR == '01':
+                                self.RDS_PS_OFFSET_1 = True
+                    
+                        elif offset == 2 and self.RDS_PS_OFFSET_2 == False:
+                            self.RDS_PS = self.RDS_PS[0:4] + self.RDS_PS[4].replace(self.RDS_PS[4], PS_FRACTION[0]) + self.RDS_PS[5].replace(self.RDS_PS[5], PS_FRACTION[1]) + self.RDS_PS[6:]
+                            if BLOCK_B_ERROR == '00' or OFFSET_ERROR == '01':
+                                self.RDS_PS_OFFSET_2 = True
+                        
+                        elif offset == 3 and self.RDS_PS_OFFSET_3 == False:                                                                 # last PS offset (no. 3)
+                            self.RDS_PS = self.RDS_PS[0:6] + self.RDS_PS[6].replace(self.RDS_PS[6], PS_FRACTION[0]) + self.RDS_PS[7].replace(self.RDS_PS[7], PS_FRACTION[1])
+                            if BLOCK_B_ERROR == '00' or OFFSET_ERROR == '01': #PS_ERROR == '00' 
+                                self.RDS_PS_OFFSET_3 = True
+                        else:
+                            pass
+                    else:
+                        pass
+                    
+                    print("PTY: ", self.RDS_PTY)
+                    print("TP: ", self.RDS_TP)
+                    print("PS name: ", self.RDS_PS, " Parts received: ",self.RDS_PS_OFFSET_0, self.RDS_PS_OFFSET_1, self.RDS_PS_OFFSET_2, self.RDS_PS_OFFSET_3)
+                    
+                    if dbg == True:
+                        print("List of received PIs: ", self.RDS_PI_list)
+                
+                    if self.RDS_ACQUIRING == True and self.RDS_PS_OFFSET_0 == True and self.RDS_PS_OFFSET_1 == True and self.RDS_PS_OFFSET_2 == True and self.RDS_PS_OFFSET_3 == True:
+                        self.RDS_ACQUIRED = True
+                        self.RDS_ACQUIRING = False
+                
+                except:                                                                 # this catches unsuccessful decoding of character
+                    if dbg == True:
+                        print("Error decoding character...")
+                    pass
         
         if self.RDS_ACQUIRING == True and self.RDS_ACQUIRED == False:
             if self.__DEVICE__ == 'ESP32':
                 time.sleep_ms(pause_time)
             elif self.__DEVICE__ == 'RPi':
                 time.sleep(pause_time/1000)
-            self.get_RDS_data(pause_time)
+            self.get_RDS_data2(pause_time, dbg)
             
-    
+            
     def get_RDS_data_ESP32(self, pause_time):
     
         self.__i2c__.writeto(0x64, b'\x20\x83\x01')             # get all available info
@@ -689,27 +726,8 @@ class TEF6686:
             print("PS name: ", self.RDS_PS)
             
         if self.RDS_ACQUIRING == True and self.RDS_PS_OFFSET_0 == True and self.RDS_PS_OFFSET_1 == True and self.RDS_PS_OFFSET_2 == True and self.RDS_PS_OFFSET_3 == True:
-            #print("Full PS received!")
             self.RDS_ACQUIRED = True
             
         if self.RDS_ACQUIRING == True and self.RDS_ACQUIRED == False:
             sleep_ms(pause_time)
-            #print("One more time...")
             self.get_RDS_data(pause_time)
-
-#-------------------------------- MAIN ----------------------------------
-
-# tuner = TEF6686(21,22,'RPi',0)
-# 
-# tuner.init_tuner()
-# 
-# tuner.init_oscillator()
-# 
-# tuner.init_settings()
-# 
-# tuner.set_volume(32)
-# 
-# tuner.tune_to('FM',8760)
-# 
-# tuner.get_RDS_data(50)
-

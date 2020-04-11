@@ -9,8 +9,13 @@
 # Implemented functions:
 * Tuner initialization & status check
 * Tuning (at the moment only FM is implemented)
-* RDS decoding
+* RDS decoding (PI, PS)
 * Volume gain control
+
+# Ongoing work
+* Implement radio text & AF decoding
+* Implement bands other than FM
+* FM filter bandwidth control
 
 # Usage of the library
 * See example.py

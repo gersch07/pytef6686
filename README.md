@@ -4,7 +4,7 @@
 # Currently implemented host devices:
 * ESP32 microcontroller running Micropython
 * Raspberry Pi (tested with model 2B), using SMBus library (make sure I2C is activated, e.g. using "raspi-config")
-IMPORTANT: TTL logic level of Raspberry Pi is 3.3V, for the TEF6686 it is 5V! IT IS CRITICAL TO USE A LEVEL SHIFTER !
+*IMPORTANT: TTL logic level of Raspberry Pi is 3.3V, for the TEF6686 it is 5V! IT IS CRITICAL TO USE A LEVEL SHIFTER !*
 
 # Implemented functions:
 * Tuner initialization & status check

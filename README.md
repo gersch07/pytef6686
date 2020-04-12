@@ -10,11 +10,10 @@
 ## 2. Implemented functions:
 * Tuner initialization & status check
 * Tuning (at the moment only FM is implemented)
-* RDS decoding (PI, PS)
+* RDS decoding (PI, PS, AF, radio text)
 * Volume gain control
 
 ## 3. Ongoing work
-* Implement radio text & AF decoding
 * Implement bands other than FM
 * FM filter bandwidth control
 

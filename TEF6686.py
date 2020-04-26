@@ -339,9 +339,13 @@ class TEF6686:
         self.__DEVICE__ = DEVICE
         self.__I2C_HW_ESP__ = I2C_HW_ESP
         
-        self.__MOD_FOUND__ = False
+        self.FREQ = 8750
+        self.BAND = 'FM'
+        self.RF_LEVEL = 0
+        
+        self.__TUNER_FOUND__ = False
         self.__TUNER_STATUS__ = None
-        self.FREQ = None
+        self.__RF_LVL_OFFSET__ = 8                                  # raw value when no signal is present
         
         #---------------------- RDS-specific variables ------------
         
@@ -389,7 +393,7 @@ class TEF6686:
         else:
             print("Unsupported I2C host device!")
         
-        self.search_module()
+        self.search_for_tuner()
 
 
     def i2c_write_line(self, line):
@@ -415,7 +419,7 @@ class TEF6686:
             return RESULT_ARRAY
 
         
-    def search_module(self, dbg = False):
+    def search_for_tuner(self, dbg = False):
         
         print("Searching for tuner module at I2C adress ", hex(I2C_TEF6686),"...")
         
@@ -439,12 +443,12 @@ class TEF6686:
             print(I2C_DEVICES)
         
         if I2C_DEVICES == []:
-            raise OSError('Tuner module not detected, check I2C wiring!')
+            raise OSError('No I2C devices detected, check I2C wiring!')
     
         for dev in I2C_DEVICES:
             if hex(dev) == hex(I2C_TEF6686):
                 print("Tuner module detected!")
-                self.__MOD_FOUND__ = True
+                self.__TUNER_FOUND__ = True
             else:
                 raise OSError('Tuner module not detected, check I2C wiring!')
         
@@ -458,7 +462,7 @@ class TEF6686:
         return OUTPUT_STRING
     
     
-    def init_tuner(self):
+    def patch_tuner(self):
         
         print("Patching tuner...")
         
@@ -466,7 +470,7 @@ class TEF6686:
             self.i2c_write_line(line)
     
     
-    def init_oscillator(self):
+    def start_oscillator(self):
         
         print("Activating crystal oscillator...")
         
@@ -474,7 +478,7 @@ class TEF6686:
             self.i2c_write_line(line)
 
 
-    def init_settings(self):
+    def load_settings(self):
         
         print("Applying settings...")
 
@@ -490,27 +494,118 @@ class TEF6686:
         self.i2c_write_line(b'\x09\x20\x51\x01\x00\x01\x00\x02\x00\x00')         # automatic un-muting after tuning
         
         
-    def tune_to(self, BAND, FREQ):
+    def init(self):
         
-        self.BAND = BAND
-        self.FREQ = FREQ
+        self.search_for_tuner()
+        self.check_tuner_status()                                                       # Tuner should now be in status "0" (inactive)
+        
+        if self.__DEVICE__ == 'RPi':
+            time.sleep(0.05)                                                            # sleep for 50 ms
+        elif self.__DEVICE__ == 'ESP32':
+            time.sleep_ms(50)
+            
+        if self.__TUNER_FOUND__ == True and self.__TUNER_STATUS__ == 0:
+            
+            self.patch_tuner()                                                          # Tuner should now be in status "1"
+            
+            if self.__DEVICE__ == 'RPi':
+                time.sleep(0.1)                                                         # sleep for 100 ms
+            elif self.__DEVICE__ == 'ESP32':
+                time.sleep_ms(100)
+            
+            self.check_tuner_status()
+            
+            if self.__TUNER_STATUS__ == 1:
+                
+                self.start_oscillator()                                                     # Tuner should now be in status "2"
+                
+                if self.__DEVICE__ == 'RPi':
+                    time.sleep(0.2)                                                         # sleep for 200 ms
+                elif self.__DEVICE__ == 'ESP32':
+                    time.sleep_ms(200)
+            
+                self.check_tuner_status()
+            else:
+                raise OSError('Tuner is NOT as expected in INACTIVE (1) state, but in state ', self.__TUNER_STATUS__ )
+
+                
+            if self.__TUNER_STATUS__ == 2:
+                    
+                self.load_settings()
+                
+                if self.__DEVICE__ == 'RPi':
+                    time.sleep(0.2)                                                         # sleep for 200 ms
+                elif self.__DEVICE__ == 'ESP32':
+                    time.sleep_ms(200)
+                
+                self.check_tuner_status()
+            else:
+                raise OSError('Tuner is NOT as expected in RADIO STANDBY (2) state, but in state ', self.__TUNER_STATUS__ )
+                    
+            if self.__TUNER_STATUS__ == 3:
+                print("Tuner successfully initialized, found in ACTIVE state!")
+                self.tune_to('FM',8750)
+                
+            else:
+                raise OSError('Tuner is NOT as expected in ACTIVE (3) state, but in state ', self.__TUNER_STATUS__)
+        
+        else:
+            if self.__TUNER_STATUS__ == 3:
+                print("Tuner already found in ACTIVE state!")
+            else:
+                raise OSError('Error in I2C communication with tuner. Did you unplug any cables?')
+            
+        
+    def tune_to(self, BAND, FREQ):
         
         print("Tuning to frequency ", FREQ, "in band ", BAND)
 
         TUNE_TO_BYTE_ARRAY = b''
     
         if BAND == 'FM':
-            TUNE_TO_BYTE_ARRAY += b'\x07\x20\x01\x01\x00\x01'
-            TUNE_TO_BYTE_ARRAY += self.FREQ.to_bytes(2, 'big')
-            self.i2c_write_line(TUNE_TO_BYTE_ARRAY)
-    
-        elif BAND == 'MW' or BAND == 'LW' or BAND == 'SW':
-            print("Not implemented!")
-    
-        else:
-            print("Invalid band")
+            if FREQ < 8750 or FREQ > 10800:
+                raise ValueError('Frequency ', FREQ,' is invalid in band FM!')
+            else:
+                self.FREQ = FREQ
+                self.BAND = BAND
+                TUNE_TO_BYTE_ARRAY += b'\x07\x20\x01\x01\x00\x01'
+                TUNE_TO_BYTE_ARRAY += self.FREQ.to_bytes(2, 'big')
         
-
+        elif BAND == 'MW':
+            if FREQ < 522 or FREQ > 1710:
+                raise ValueError('Frequency ', FREQ, 'is invalid in band MW!')
+            else:
+                self.FREQ = FREQ
+                self.BAND = BAND
+                TUNE_TO_BYTE_ARRAY += b'\x07\x21\x01\x01\x00\x01'
+                TUNE_TO_BYTE_ARRAY += self.FREQ.to_bytes(2, 'big')
+        
+        elif BAND == 'SW':
+            if FREQ < 2300 or FREQ > 27000:
+                raise ValueError('Frequency ', FREQ, 'is invalid in band SW!')
+            else:
+                self.FREQ = FREQ
+                self.BAND = BAND
+                TUNE_TO_BYTE_ARRAY += b'\x07\x21\x01\x01\x00\x01'
+                TUNE_TO_BYTE_ARRAY += self.FREQ.to_bytes(2, 'big')
+        
+        elif BAND == 'LW':
+            if FREQ < 144 or FREQ > 288:
+                raise ValueError('Frequency ', FREQ, 'is invalid in band SW!')
+            else:
+                self.FREQ = FREQ
+                self.BAND = BAND
+                TUNE_TO_BYTE_ARRAY += b'\x07\x21\x01\x01\x00\x01'
+                TUNE_TO_BYTE_ARRAY += self.FREQ.to_bytes(2, 'big')
+    
+        elif BAND == 'OIRT' or BAND == 'LW':
+            raise ValueError('Band not yet implemented!')
+        else:
+            raise ValueError('Please choose a valid band (FM/MW/LW/SW)"')
+        
+        self.i2c_write_line(TUNE_TO_BYTE_ARRAY)
+        
+        # Reset station-dependent parameters
         self.RDS_PI = '----'
         self.RDS_PS = '--------'
         self.RDS_RT = '--------------------------------'
@@ -526,7 +621,50 @@ class TEF6686:
         self.__PS_LIST__ = ['--','--', '--', '--']
         self.__RT_LIST__ = ['--','--', '--', '--', '--','--', '--', '--', '--','--', '--', '--', '--','--', '--', '--']
         
-    
+        
+    def tune_step(self, mode = 'UP', step = 10, dbg = False):                                   # default step: 100 kHz
+        
+        CURRENT_FREQ = self.FREQ
+        
+        if mode == 'UP' and self.BAND == 'FM':
+            NEW_FREQ = CURRENT_FREQ + step
+        elif mode == 'DOWN' and self.BAND == 'FM':
+            NEW_FREQ = CURRENT_FREQ - step
+            
+        if NEW_FREQ > 10800:
+            NEW_FREQ = 8750
+        elif NEW_FREQ < 8750:
+            NEW_FREQ = 10800
+        
+        if dbg == True:
+            print ("Will now tune to frequency ", NEW_FREQ, "in current band ", self.BAND,"!")
+        
+        self.tune_to(self.BAND, NEW_FREQ)
+        
+
+    def seek(self, mode = 'UP', sens = 'local'):
+        
+        if sens == 'local':
+            RF_threshold_level = 40
+        elif sens == 'DX':
+            RF_threshold_level = 15
+            
+        RF_abs_level = self.__RF_LVL_OFFSET__
+        
+        self.i2c_write_line(b'\x05\x30\x0B\x01\x00\x01')                          # muting while searching
+        
+        while RF_abs_level < RF_threshold_level:
+            self.tune_step(mode, step = 10)
+            time.sleep(0.05)
+            RF_abs_level = self.get_signal_info()[0]
+            time.sleep(0.01)
+        
+        self.i2c_write_line(b'\x05\x30\x0B\x01\x00\x00')                          # un-mute
+        
+        print("Stopped seek at ", self.FREQ)
+        return self.FREQ
+        
+
     def set_volume_gain(self, VOLUME_GAIN = 0, dbg = False):                      # sets volume GAIN(!): -599 to +240 possible (default: 0)
         
         self.VOLUME_GAIN = VOLUME_GAIN
@@ -534,13 +672,14 @@ class TEF6686:
         VOL_BYTE_ARRAY = b''
         VOL_BYTE_ARRAY += b'\x05\x30\x0A\x01'
         VOL_BYTE_ARRAY += self.VOLUME_GAIN.to_bytes(2, byteorder = 'big', signed = True)
+        
         if dbg == True:
             print(VOL_BYTE_ARRAY)
             
         self.i2c_write_line(VOL_BYTE_ARRAY)
         
         
-    def check_module_status(self):
+    def check_tuner_status(self):
         
         self.i2c_write_line(GET_OPERATION_BYTE_ARRAY)
         RESULT_ARRAY = self.i2c_read(2)
@@ -562,34 +701,53 @@ class TEF6686:
             self.__TUNER_STATUS__ = 3
     
     
-    def get_signal_info(self):              #  returns signal strength (in dBµV), stereo
+    def get_signal_info(self, mode = 'fast', dbg = False):                                      # 'fast' mode: returns signal strength (in dBµV), stereo; 'full': also RDS availability
         
-        self.i2c_write_line(b'\x03\x20\x81\x01')
-        result = self.i2c_read(14)
-        RF_level = 0.1 * int.from_bytes(result[2:4], 'big')
+        if mode == 'fast':                                                                      # available 2ms after tuning
+            
+            self.i2c_write_line(b'\x03\x20\x80\x01')                                            # get fast quality status (no additional data like IF bandwidth, multipath detection etc
+            result = self.i2c_read(4)
+            RF_level = 0.1 * int.from_bytes(result[2:4], 'big')
+            
+            self.i2c_write_line(b'\x03\x20\x85\x01')
+            result = self.i2c_read(2)
         
-        self.i2c_write_line(b'\x03\x20\x85\x01')
-        result = self.i2c_read(2)
+            if result == b'\x80\x00':
+                FM_stereo = True
+            else:                                                                                # when no explicit stereo bit is received, i.e., result == b'\x00\x00':
+                FM_stereo = False
+
+            return RF_level, FM_stereo
         
-        if result == b'\x80\x00':
-            FM_stereo = True
-        elif result == b'\x00\x00':
-            FM_stereo = False
+        if mode == 'full':
+            
+            self.i2c_write_line(b'\x03\x20\x81\x01')
+            result = self.i2c_read(14)
+            RF_level = 0.1 * int.from_bytes(result[2:4], 'big')
         
-        self.i2c_write_line(b'\x03\x20\x82\x01')
-        result = self.i2c_read(2)
+            self.i2c_write_line(b'\x03\x20\x85\x01')
+            result = self.i2c_read(2)
         
-        if result == b'\xC2\x00':
-            RDS_available = True
-        else:
-            RDS_available = False
+            if result == b'\x80\x00':
+                FM_stereo = True
+            else:                                                                                # when no explicit stereo bit is received, i.e., result == b'\x00\x00':
+                FM_stereo = False
         
-        print(RF_level, " dBµV, Stereo: ", FM_stereo, " RDS: ", RDS_available)
+            self.i2c_write_line(b'\x03\x20\x82\x01')
+            result = self.i2c_read(2)
         
-        return RF_level, FM_stereo, RDS_available
+            if result == b'\xC2\x00' or result == b'\x82\x00':
+                RDS_available = True
+            else:
+                RDS_available = False
+        
+            #if dbg == True:
+            #    print(RF_level, " dBµV, Stereo: ", FM_stereo, " RDS: ", RDS_available)
+        
+            return RF_level, FM_stereo, RDS_available
     
             
-    def get_RDS_data(self, pause_time = 70, dbg = False):                                   # 70 ms pause_time gives best results in terms of RDS CRC errors
+    def get_RDS_data(self, pause_time = 70, repeat = True, dbg = False):                                   # 70 ms pause_time gives best results in terms of RDS CRC errors
     
         self.i2c_write_line(b'\x03\x20\x83\x01')                                            # get all available RDS info               
         result = self.i2c_read(12)                                                          # according to datasheet: 12 bytes returned, e.g., b'\xc2\x00\xde\x1f\x04\x0f\xcb\xcdM \x00\x00\x00\x15\xde\xad'                                                                        # list to collect PIs from several polls
@@ -649,29 +807,6 @@ class TEF6686:
                             if BLOCK_B_ERROR == '00' or BLOCK_B_ERROR == '01':
                                 self.__PS_OFFSET__[offset] = True
                         
-                        #if offset == 0 and self.__PS_OFFSET__[0] == False:
-                        #    self.__PS_LIST__[0] = PS_FRACTION
-                        #    if BLOCK_B_ERROR == '00' or OFFSET_ERROR == '01':
-                        #        self.__PS_OFFSET__[0] = True
-                        
-                        #elif offset == 1 and self.__PS_OFFSET__[1] == False:
-                        #    self.__PS_LIST__[1] = PS_FRACTION
-                        #    if BLOCK_B_ERROR == '00' or OFFSET_ERROR == '01':
-                        #        self.__PS_OFFSET__[1] = True
-                    
-                        #elif offset == 2 and self.__PS_OFFSET__[2] == False:
-                        #    self.__PS_LIST__[2] = PS_FRACTION
-                        #    if BLOCK_B_ERROR == '00' or OFFSET_ERROR == '01':
-                        #        self.__PS_OFFSET__[2] = True
-                        
-                        #elif offset == 3 and self.__PS_OFFSET__[3] == False:# last PS offset (no. 3)
-                        #    self.__PS_LIST__[3] = PS_FRACTION
-                        #    if BLOCK_B_ERROR == '00' or OFFSET_ERROR == '01':
-                        #        self.__PS_OFFSET__[3] = True
-                        
-                        #else:
-                        #    pass
-                        
                         self.RDS_PS = self.__PS_LIST__[0] + self.__PS_LIST__[1] + self.__PS_LIST__[2] + self.__PS_LIST__[3]
                     else:
                         pass
@@ -687,10 +822,11 @@ class TEF6686:
                     
                     #--------------------------------- SHOW RESULTS ---------------------------
                     
-                    print("PTY: ", self.RDS_PTY)
-                    print("TP: ", self.RDS_TP)
-                    print("AFs: ", self.AF_LIST)
-                    print("PS name: ", self.RDS_PS, "Received segments: ", self.__PS_OFFSET__ )
+                    if dbg == True:
+                        print("PTY: ", self.RDS_PTY)
+                        print("TP: ", self.RDS_TP)
+                        print("AFs: ", self.AF_LIST)
+                        print("PS name: ", self.RDS_PS, "Received segments: ", self.__PS_OFFSET__ )
                     
                     #if self.__AF_LIST_UNCHANGED__ > 30:                                             # 30 iterations without new AF: consider list as complete
                     #    print("AF list probably complete!")
@@ -705,7 +841,7 @@ class TEF6686:
             elif self.RDS_ACQUIRING == True and RDS_BLOCK_B[0:5] == '00100':
                 
                 #if dbg == True:
-                print("Group type 2A detected!")
+                    #print("Group type 2A detected!")
                 
                 offset = int(RDS_BLOCK_B[-4])*8 + int(RDS_BLOCK_B[-3]) * 4 + int(RDS_BLOCK_B[-2]) * 2 + int(RDS_BLOCK_B[-1]) * 1 
                 
@@ -718,16 +854,23 @@ class TEF6686:
                     if dbg == True:
                         print("Error decoding character...")
                     pass
-                
+        
+            RDS_data_dict = {'PI': self.RDS_PI, 'PS': self.RDS_PS, 'RT': self.RDS_RT, 'TP': self.RDS_TP }
+            yield RDS_data_dict
+        
+        
+        if repeat == True:                                                                        # disables continuous polling if library is controlled by a program's main loop
             
+            if self.RDS_ACQUIRING == True and self.RDS_ACQUIRED == False:
+                if self.__DEVICE__ == 'ESP32':
+                    time.sleep_ms(pause_time)
+                elif self.__DEVICE__ == 'RPi':
+                    time.sleep(pause_time/1000)
+                    
+            self.get_RDS_data(pause_time, repeat, dbg)
             
-        if self.RDS_ACQUIRING == True and self.RDS_ACQUIRED == False:
-            if self.__DEVICE__ == 'ESP32':
-                time.sleep_ms(pause_time)
-            elif self.__DEVICE__ == 'RPi':
-                time.sleep(pause_time/1000)
-            self.get_RDS_data(pause_time, dbg)
-            
+
+#------------------------- OUTDATED CODE FOR ESP32, TO BE CHECKED! ----------------------------------------
             
 #     def get_RDS_data_ESP32(self, pause_time):
 #     

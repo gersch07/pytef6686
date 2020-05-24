@@ -648,6 +648,8 @@ class TEF6686:
             RF_threshold_level = 40
         elif sens == 'DX':
             RF_threshold_level = 15
+        else:
+            raise ValueError('Invalid seek sensitivity. Either local or DX.')
             
         RF_abs_level = self.__RF_LVL_OFFSET__
         
@@ -849,7 +851,8 @@ class TEF6686:
                     RT_FRACTION = RDS_BLOCK_C.decode('UTF-8') + RDS_BLOCK_D.decode('UTF-8')
                     self.__RT_LIST__[offset] = RT_FRACTION
                     self.RDS_RT = list(accumulate(self.__RT_LIST__))[-1]
-                    print("RT: ", self.RDS_RT)
+                    if dbg == True:
+                        print("RT: ", self.RDS_RT)
                 except:
                     if dbg == True:
                         print("Error decoding character...")

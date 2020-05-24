@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>411</width>
-    <height>300</height>
+    <width>449</width>
+    <height>329</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -30,8 +30,8 @@
    <widget class="QPushButton" name="SeekDown_Button">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>200</y>
+      <x>20</x>
+      <y>250</y>
       <width>91</width>
       <height>31</height>
      </rect>
@@ -43,8 +43,8 @@
    <widget class="QPushButton" name="TuneDown_Button">
     <property name="geometry">
      <rect>
-      <x>110</x>
-      <y>200</y>
+      <x>120</x>
+      <y>250</y>
       <width>91</width>
       <height>31</height>
      </rect>
@@ -56,8 +56,8 @@
    <widget class="QPushButton" name="TuneUp_Button">
     <property name="geometry">
      <rect>
-      <x>210</x>
-      <y>200</y>
+      <x>220</x>
+      <y>250</y>
       <width>91</width>
       <height>31</height>
      </rect>
@@ -69,8 +69,8 @@
    <widget class="QPushButton" name="SeekUp_Button">
     <property name="geometry">
      <rect>
-      <x>310</x>
-      <y>200</y>
+      <x>320</x>
+      <y>250</y>
       <width>91</width>
       <height>31</height>
      </rect>
@@ -92,8 +92,8 @@
    <widget class="QLabel" name="SeekDown_Label">
     <property name="geometry">
      <rect>
-      <x>20</x>
-      <y>180</y>
+      <x>30</x>
+      <y>230</y>
       <width>71</width>
       <height>16</height>
      </rect>
@@ -108,8 +108,8 @@
    <widget class="QLabel" name="TuneDown_Label">
     <property name="geometry">
      <rect>
-      <x>120</x>
-      <y>180</y>
+      <x>130</x>
+      <y>230</y>
       <width>71</width>
       <height>16</height>
      </rect>
@@ -124,8 +124,8 @@
    <widget class="QLabel" name="TuneUp_Label">
     <property name="geometry">
      <rect>
-      <x>220</x>
-      <y>180</y>
+      <x>230</x>
+      <y>230</y>
       <width>71</width>
       <height>16</height>
      </rect>
@@ -140,8 +140,8 @@
    <widget class="QLabel" name="SeekUp_Label">
     <property name="geometry">
      <rect>
-      <x>320</x>
-      <y>180</y>
+      <x>330</x>
+      <y>230</y>
       <width>71</width>
       <height>16</height>
      </rect>
@@ -172,8 +172,8 @@
    <widget class="QLabel" name="TP_Ind_Label">
     <property name="geometry">
      <rect>
-      <x>370</x>
-      <y>100</y>
+      <x>410</x>
+      <y>10</y>
       <width>31</width>
       <height>16</height>
      </rect>
@@ -227,9 +227,9 @@
    <widget class="QTextBrowser" name="RDSRT_TextBrowser">
     <property name="geometry">
      <rect>
-      <x>90</x>
-      <y>100</y>
-      <width>256</width>
+      <x>10</x>
+      <y>110</y>
+      <width>431</width>
       <height>61</height>
      </rect>
     </property>
@@ -238,7 +238,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>100</y>
+      <y>90</y>
       <width>71</width>
       <height>16</height>
      </rect>
@@ -315,13 +315,36 @@
      <set>Qt::AlignCenter</set>
     </property>
    </widget>
+   <widget class="QComboBox" name="SeekSensitivity_Combo">
+    <property name="geometry">
+     <rect>
+      <x>120</x>
+      <y>180</y>
+      <width>79</width>
+      <height>23</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="SeekSensitivity_Label">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>180</y>
+      <width>101</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Seek sensitivity</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>411</width>
+     <width>449</width>
      <height>20</height>
     </rect>
    </property>

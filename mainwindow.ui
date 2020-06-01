@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>449</width>
-    <height>329</height>
+    <height>340</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -19,7 +19,7 @@
      <rect>
       <x>10</x>
       <y>10</y>
-      <width>71</width>
+      <width>81</width>
       <height>16</height>
      </rect>
     </property>
@@ -82,7 +82,7 @@
    <widget class="QLCDNumber" name="Frequency_LCD">
     <property name="geometry">
      <rect>
-      <x>90</x>
+      <x>100</x>
       <y>10</y>
       <width>101</width>
       <height>31</height>
@@ -92,10 +92,10 @@
    <widget class="QLabel" name="SeekDown_Label">
     <property name="geometry">
      <rect>
-      <x>30</x>
+      <x>20</x>
       <y>230</y>
-      <width>71</width>
-      <height>16</height>
+      <width>91</width>
+      <height>20</height>
      </rect>
     </property>
     <property name="text">
@@ -108,10 +108,10 @@
    <widget class="QLabel" name="TuneDown_Label">
     <property name="geometry">
      <rect>
-      <x>130</x>
+      <x>120</x>
       <y>230</y>
-      <width>71</width>
-      <height>16</height>
+      <width>91</width>
+      <height>20</height>
      </rect>
     </property>
     <property name="text">
@@ -124,10 +124,10 @@
    <widget class="QLabel" name="TuneUp_Label">
     <property name="geometry">
      <rect>
-      <x>230</x>
+      <x>220</x>
       <y>230</y>
-      <width>71</width>
-      <height>16</height>
+      <width>91</width>
+      <height>20</height>
      </rect>
     </property>
     <property name="text">
@@ -140,10 +140,10 @@
    <widget class="QLabel" name="SeekUp_Label">
     <property name="geometry">
      <rect>
-      <x>330</x>
+      <x>320</x>
       <y>230</y>
-      <width>71</width>
-      <height>16</height>
+      <width>91</width>
+      <height>20</height>
      </rect>
     </property>
     <property name="text">
@@ -198,7 +198,7 @@
    <widget class="QLabel" name="Signal_Label">
     <property name="geometry">
      <rect>
-      <x>200</x>
+      <x>210</x>
       <y>10</y>
       <width>71</width>
       <height>16</height>
@@ -318,7 +318,7 @@
    <widget class="QComboBox" name="SeekSensitivity_Combo">
     <property name="geometry">
      <rect>
-      <x>120</x>
+      <x>140</x>
       <y>180</y>
       <width>79</width>
       <height>23</height>
@@ -330,7 +330,7 @@
      <rect>
       <x>10</x>
       <y>180</y>
-      <width>101</width>
+      <width>111</width>
       <height>16</height>
      </rect>
     </property>
@@ -345,7 +345,7 @@
      <x>0</x>
      <y>0</y>
      <width>449</width>
-     <height>20</height>
+     <height>28</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuTEF_6686_Tuner">

@@ -6,6 +6,7 @@
 
 import sys
 import time
+from datetime import date, datetime
 import os
 
 import numpy as np
@@ -52,13 +53,13 @@ class DXMonitor_Window(QDialog, DXMonitor_UI):
         self.ExportCSV_Button.setDisabled(True)
         self.ExportCSV_Button.clicked.connect(self.export_table)
         self.FreqMonitor_Button.setDisabled(True)
-        self.FreqMonitor_Button.clicked.connect(self.frequency_monitor)
+        self.FreqMonitor_Button.clicked.connect(self.start_frequency_monitor)
         self.ImportLocalStations_Button.clicked.connect(self.import_local_stations)
         
-        self.prepare_list()
+        self.clear_list()
         
     
-    def prepare_list(self):
+    def clear_list(self):
         
         self.StationList_Table.setRowCount(1)
         self.StationList_Table.setColumnCount(4)
@@ -77,20 +78,24 @@ class DXMonitor_Window(QDialog, DXMonitor_UI):
             self.StationList_Table.setItem(current_rows, 1, QTableWidgetItem('%.1f' %  self.parent().signal_strength))
             self.StationList_Table.setItem(current_rows, 2, QTableWidgetItem(self.parent().RDS_PI))
             self.StationList_Table.setItem(current_rows, 3, QTableWidgetItem(self.parent().RDS_PS))
+            
     
     def log_station(self):
         
+        current_date = date.today().strftime("%Y-%m-%d")
+        current_time = datetime.now().strftime("%H:%M:%S")
+        
         if not self.parent().RDS_PI == '----':
-            
+            print("Logging station...")
             try:
-                os.chdir('/home/pi/logs/2020-05-23')
+                os.chdir('/home/pi/logs/' + current_date)
             except:
-                os.mkdir('/home/pi/logs/' + '2020-05-23')
+                os.mkdir('/home/pi/logs/' + current_date)
             
-            file_path = './2020-05-23' + '_' + str(self.parent().frequency) + '_' + str(self.parent().RDS_PI) + '.txt'
+            file_path = './' + current_date + '_' + str(self.parent().frequency) + '_' + str(self.parent().RDS_PI) + '.txt'
             
             with open(file_path, 'a') as file_handler:
-                file_handler.write( str(self.parent().RDS_PI)+ ',' + self.parent().RDS_PS +',' + str(self.parent().signal_strength) )
+                file_handler.write( current_time + ',' + str(self.parent().RDS_PI)+ ',' + self.parent().RDS_PS +',' + str(self.parent().signal_strength) +'\n')
 
     
     def export_table(self):
@@ -135,8 +140,7 @@ class DXMonitor_Window(QDialog, DXMonitor_UI):
             
             for line in file_handler:
                 try:
-                    self.LOCAL_STATION_LIST.append(int(line[1:5]))
-                    print(line[1:5])
+                    self.LOCAL_STATION_LIST.append(int(line.split(',')[1]))
                 except:
                     pass
                 
@@ -154,6 +158,7 @@ class DXMonitor_Window(QDialog, DXMonitor_UI):
         self.ScanLocalStations_Button.setText("Stop")
         self.ScanLocalStations_Button.clicked.connect(self.stop_scan_local_stations)
         
+        self.LOCAL_STATION_LIST = []
         self.parent().SCAN_LOCAL_ACTIVE = True                                           # variable to determine whether loca sc
         self.parent().tuner_worker.tune_to_freq(8750)
         self.STEPS_SKIPPED = 0
@@ -238,6 +243,7 @@ class DXMonitor_Window(QDialog, DXMonitor_UI):
 
     def update_parent_tuning_buttons(self):
         
+        print("Tuning buttons currently enabeld: ", self.parent().TuneDown_Button.isEnabled() )
         if self.parent().TuneDown_Button.isEnabled() == True:
             self.parent().TuneDown_Button.setDisabled(True)
             self.parent().TuneUp_Button.setDisabled(True)
@@ -251,18 +257,20 @@ class DXMonitor_Window(QDialog, DXMonitor_UI):
             self.parent().SeekUp_Button.setDisabled(False)
 
 
-    def frequency_monitor(self):
+    def start_frequency_monitor(self):
         
+        print("Starting frequency monitor...")
         self.make_monitor_freq_list()
         
         # user interface
         self.update_parent_tuning_buttons()
         self.FreqMonitor_Button.setText("Stop")
+        self.FreqMonitor_Button.clicked.disconnect()
         self.FreqMonitor_Button.clicked.connect(self.stop_frequency_monitor)
         self.ScanLocalStations_Button.setDisabled(True)
         
         self.MONITOR_ACTIVE = True
-        self.prepare_list()
+        self.clear_list()
         self.STEPS_SKIPPED = 0
         self.CURRENT_FREQ_IND = 0
         self.TUNING_TYPE = 'monitor_list'
@@ -274,18 +282,22 @@ class DXMonitor_Window(QDialog, DXMonitor_UI):
     
     def stop_frequency_monitor(self):
         
+        print("Stop frequency monitor...")
         self.monitor_timer.stop()
         self.MONITOR_ACTIVE = False
+        #self.MONITOR_LIST = []
         
         # user interface
         self.ScanLocalStations_Button.setDisabled(False)
         self.FreqMonitor_Button.setText("Start")
-        self.FreqMonitor_Button.clicked.connect(self.frequency_monitor)
+        self.FreqMonitor_Button.clicked.disconnect()
+        self.FreqMonitor_Button.clicked.connect(self.start_frequency_monitor)
         self.update_parent_tuning_buttons()
 
 
     def make_monitor_freq_list(self):                                                                # generate list of frequencies to be monitored (excluding local stations)
         
+        print("Generating list of frequencies to be monitored...")
         self.MONITOR_LIST = []
         self.UPPER_FREQ_LIMIT_IND = int((int(self.UpperFreqLimit_Edit.text())-8750)/10)
         
@@ -494,6 +506,7 @@ class MainApp(QMainWindow,MainApp_UI):
     def initialize_tuner(self):
         
         self.tuner_worker.initialize_tuner()
+        print("Tuner active: ", self.tuner_worker.TUNER_ACTIVE)
         
         if self.tuner_worker.TUNER_ACTIVE == True:
             self.Menu_InitTuner.setDisabled(True)
@@ -527,6 +540,7 @@ class MainApp(QMainWindow,MainApp_UI):
         self.RDS_PI_QLabel.setText('----')
         self.RDSRT_TextBrowser.clear()
         self.RDS_BLOCK_DETECTED = False
+        self.TP_Ind_Label.setStyleSheet('color: black')
         self.Frequency_LCD.display(frequency)
         self.frequency = frequency
         
@@ -571,6 +585,13 @@ class MainApp(QMainWindow,MainApp_UI):
             pass
         try:
             self.RDSRT_TextBrowser.append(RDS_data_temp['RT'])
+        except:
+            pass
+        try:
+            if RDS_data_temp['TP'] == '1':
+                self.TP_Ind_Label.setStyleSheet('color: red')
+            else:
+                self.TP_Ind_Label.setStyleSheet('color: black')
         except:
             pass
             
@@ -630,7 +651,7 @@ class TunerWorker(QObject):
             
             if loop_count == 5:
                 
-                signal_strength, FM_stereo, RDS_available = self.tuner.get_signal_info('full')
+                signal_strength, FM_stereo, RDS_available, IF_bandwidth = self.tuner.get_signal_info('full')
                 self.SIGNAL_STRENGTH.emit(signal_strength)
                 self.SIGNAL_STATUS.emit([FM_stereo, RDS_available])
                 loop_count = 0
@@ -691,7 +712,7 @@ class TunerWorker(QObject):
 ####################################################################################################
 ####                                                                                            ####
 ####                                               MAIN                                         ####           ####
-####                                                                                            ####          ####
+####                                                                                            ####    
 ####################################################################################################
 
 if __name__ == '__main__':

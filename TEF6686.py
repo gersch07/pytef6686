@@ -647,7 +647,7 @@ class TEF6686:
         if sens == 'local':
             RF_threshold_level = 40
         elif sens == 'DX':
-            RF_threshold_level = 15
+            RF_threshold_level = 20
         else:
             raise ValueError('Invalid seek sensitivity. Either local or DX.')
             
@@ -656,8 +656,13 @@ class TEF6686:
         self.i2c_write_line(b'\x05\x30\x0B\x01\x00\x01')                          # muting while searching
         
         while RF_abs_level < RF_threshold_level:
+            
+            if self.FREQ - int(self.FREQ/10)*10 == 5:
+                self.tune_step(mode, step =5)
+            else:
+                pass
             self.tune_step(mode, step = 10)
-            time.sleep(0.05)
+            time.sleep(0.03) # time.sleep(0.05)
             RF_abs_level = self.get_signal_info()[0]
             time.sleep(0.01)
         
@@ -726,6 +731,7 @@ class TEF6686:
             self.i2c_write_line(b'\x03\x20\x81\x01')
             result = self.i2c_read(14)
             RF_level = 0.1 * int.from_bytes(result[2:4], 'big')
+            IF_bandwidth = 0.1*int.from_bytes(result[10:12],'big')
         
             self.i2c_write_line(b'\x03\x20\x85\x01')
             result = self.i2c_read(2)
@@ -746,7 +752,7 @@ class TEF6686:
             #if dbg == True:
             #    print(RF_level, " dBµV, Stereo: ", FM_stereo, " RDS: ", RDS_available)
         
-            return RF_level, FM_stereo, RDS_available
+            return RF_level, FM_stereo, RDS_available, IF_bandwidth
     
             
     def get_RDS_data(self, pause_time = 70, repeat = True, dbg = False):                                   # 70 ms pause_time gives best results in terms of RDS CRC errors

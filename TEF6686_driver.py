@@ -657,10 +657,11 @@ class TEF6686:
         
         while RF_abs_level < RF_threshold_level:
             
-            if self.FREQ - int(self.FREQ/10)*10 == 5:
-                self.tune_step(mode, step =5)
+            if self.FREQ - int(self.FREQ/10)*10 != 0:
+                self.tune_to('FM', round(self.FREQ/10)*10 )
             else:
                 pass
+            
             self.tune_step(mode, step = 10)
             time.sleep(0.03) # time.sleep(0.05)
             RF_abs_level = self.get_signal_info()[0]

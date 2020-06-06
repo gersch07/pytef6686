@@ -402,8 +402,9 @@ class StationList_Window(QDialog, StationList_UI):
 class MainApp(QMainWindow,MainApp_UI):
     
     FREQ = pyqtSignal(int)
-    SIGNAL_STRENGTH = pyqtSignal(float)
-    SIGNAL_STATUS = pyqtSignal(list)
+    #SIGNAL_STRENGTH = pyqtSignal(float)
+    #SIGNAL_STATUS = pyqtSignal(list)
+    SIGNAL_INFO = pyqtSignal(list)
     RDS_DATA = pyqtSignal(object)
     
     
@@ -430,8 +431,13 @@ class MainApp(QMainWindow,MainApp_UI):
         self.Menu_InitTuner = QAction("Initialize tuner module", self)
         self.Menu_Quit = QAction("Quit", self)
         self.Menu_Window = self.Menu.addMenu("Window")
-        self.Menu_StationList = QAction("Station list", self)
-        self.Menu_DXMonitor = QAction("DX monitor", self)
+        self.Menu_StationList = QAction("Manual logging", self)
+        self.Menu_DXMonitor = QAction("Automatic logging", self)
+        
+        self.Frequency_LCD.setStyleSheet('QLCDNumber {color: red; background-color: white;}')
+        self.Frequency_LCD.display('---.--')
+        self.Signal_dBuV_LCD.setStyleSheet('QLCDNumber {color: red; background-color: white;}')
+        self.Signal_dBuV_LCD.display('--.-')
         
         # Allocate actions
         self.Menu_File.addAction(self.Menu_InitTuner)
@@ -455,16 +461,29 @@ class MainApp(QMainWindow,MainApp_UI):
         # Create entries in "Seek sensitivity" combo
         self.SeekSensitivity_Combo.addItem('local')
         self.SeekSensitivity_Combo.addItem('DX')
+        
+        # Create entries in "Tune Steps" combo
+        self.TUNESTEPS_LIST = [1,5,10,20,50,100]
+        self.TuneSteps_Combo.addItem('10 kHz')
+        self.TuneSteps_Combo.addItem('50 kHz')
+        self.TuneSteps_Combo.addItem('100 kHz')
+        self.TuneSteps_Combo.addItem('200 kHz')
+        self.TuneSteps_Combo.addItem('500 kHz')
+        self.TuneSteps_Combo.addItem('1 MHz')
+        self.TuneSteps_Combo.setCurrentIndex(2)
        
         # Start tuner thread
         self.tuner_thread = QThread()
         self.tuner_worker = TunerWorker()
         self.tuner_worker.moveToThread(self.tuner_thread)
         self.tuner_thread.start()
+        
+        # connect pyqtSignals
         self.tuner_worker.FREQ.connect(self.update_frequency)
-        self.tuner_worker.SIGNAL_STRENGTH.connect(self.update_signal_strength)
-        self.tuner_worker.SIGNAL_STATUS.connect(self.update_indicators)
         self.tuner_worker.RDS_DATA.connect(self.update_RDS)
+        self.tuner_worker.SIGNAL_INFO.connect(self.update_signal_info)
+        
+        self.statusBar.showMessage('Tuner: DISCONNECTED')
         
         
     def show_station_list(self):
@@ -514,12 +533,12 @@ class MainApp(QMainWindow,MainApp_UI):
     
     def tune_up(self):
         
-        self.tuner_worker.tune_up()
+        self.tuner_worker.tune_up(self.TUNESTEPS_LIST[self.TuneSteps_Combo.currentIndex()] )
     
     
     def tune_down(self):
         
-        self.tuner_worker.tune_down()
+        self.tuner_worker.tune_down(self.TUNESTEPS_LIST[self.TuneSteps_Combo.currentIndex()] )
         
         
     def seek_up(self):
@@ -541,22 +560,22 @@ class MainApp(QMainWindow,MainApp_UI):
         self.RDSRT_TextBrowser.clear()
         self.RDS_BLOCK_DETECTED = False
         self.TP_Ind_Label.setStyleSheet('color: black')
-        self.Frequency_LCD.display(frequency)
+        self.Frequency_LCD.display('%.2f' % (frequency/100) )
         self.frequency = frequency
         
-    
-    def update_signal_strength(self, signal_strength):
         
-        self.Signal_dBuV_LCD.display(signal_strength)
-        self.signal_strength = signal_strength
-
+    def update_signal_info(self, signal_info):                                # signal info: [signal_strength, IF_bandwidth, FM_stereo, RDS_available]
         
-    def update_indicators(self, signal_status):
+        # store signal info variables
+        self.signal_strength = signal_info[0]
+        self.IF_bandwidth = signal_info[1]
+        self.FM_stereo = signal_info[2]
+        self.RDS_available = signal_info[3]
         
-        FM_stereo = signal_status[0]
-        self.RDS_available = signal_status[1]
+        # refresh GUI elements
+        self.Signal_dBuV_LCD.display('%.1f' % self.signal_strength)
         
-        if FM_stereo == True:
+        if self.FM_stereo == True:
             self.Stereo_Ind_Label.setStyleSheet('color: red')
         else:
             self.Stereo_Ind_Label.setStyleSheet('color: black')
@@ -567,8 +586,11 @@ class MainApp(QMainWindow,MainApp_UI):
             
         else:
             self.RDS_Ind_Label.setStyleSheet('color: black')
-    
-    
+        
+        STATUSBAR_MESSAGE = 'Tuner: ON   |   ' + 'IF Filter: ' + str(int(self.IF_bandwidth)) + ' kHz'
+        self.statusBar.showMessage(STATUSBAR_MESSAGE)
+        
+        
     def update_RDS(self, RDS_data):
         
         for elem in RDS_data:
@@ -615,12 +637,14 @@ class TunerWorker(QObject):
     FREQ = pyqtSignal(int)
     SIGNAL_STRENGTH = pyqtSignal(float)
     SIGNAL_STATUS = pyqtSignal(list)
+    SIGNAL_INFO = pyqtSignal(list)
     
     
     def __init__(self):
         QObject.__init__(self)
         self.TUNER_ACTIVE = False
         self.__MONITOR_SIGNAL__ = False
+        self.__REFRESH_SIGNAL_INTERVAL__ = 88.5                      # msec, produces 25 refreshes/sec
     
     
     def initialize_tuner(self):
@@ -635,35 +659,64 @@ class TunerWorker(QObject):
         self.tuner.tune_to('FM',8750)
         #
         self.FREQ.emit(self.tuner.FREQ)
-        self.__MONITOR_SIGNAL__ = True
+        self.__MONITOR_SIGNAL__ = False
         time.sleep(2)
         print("Starting signal monitor...")
-        self.monitor_signal()
+        self.toggle_signal_monitor()
     
     
-    @pyqtSlot()
-    def monitor_signal(self):
+    def toggle_signal_monitor(self):
         
-        loop_count = 0
+        if self.__MONITOR_SIGNAL__ == False:
+            self.signal_timer = QTimer()
+            self.signal_timer.timeout.connect(self.signal_monitor)
+            self.signal_timer.start(self.__REFRESH_SIGNAL_INTERVAL__)
+            print("Signal monitor timer started...")
+            self.__MONITOR_SIGNAL__ = True
         
-        while self.__MONITOR_SIGNAL__ == True:
-            loop_count += 1
+        elif self.__MONITOR_SIGNAL__ == True:
+            self.signal_timer.stop()
+            print("Signal monitor timer stopped...")
+            self.__MONITOR_SIGNAL__ = False
             
-            if loop_count == 5:
+            
+    @pyqtSlot()
+    def signal_monitor(self):
+        
+        signal_strength, FM_stereo, RDS_available, IF_bandwidth = self.tuner.get_signal_info('full')
+        self.SIGNAL_INFO.emit([signal_strength, IF_bandwidth, FM_stereo, RDS_available])
                 
-                signal_strength, FM_stereo, RDS_available, IF_bandwidth = self.tuner.get_signal_info('full')
-                self.SIGNAL_STRENGTH.emit(signal_strength)
-                self.SIGNAL_STATUS.emit([FM_stereo, RDS_available])
-                loop_count = 0
-                
-                if RDS_available == True:
-                    RDS_data_dict = self.tuner.get_RDS_data(pause_time = 0, repeat = False)
-                    self.RDS_DATA.emit(RDS_data_dict)
-                else:
-                    pass
-                    
-            QApplication.processEvents()
-            time.sleep(0.012)
+        if RDS_available == True:
+            RDS_data_dict = self.tuner.get_RDS_data(pause_time = 0, repeat = False)
+            self.RDS_DATA.emit(RDS_data_dict)
+        else:
+            pass
+        
+#              DEPRECATED, USE OF QTIMER SHOULD BE MORE EFFICIENT
+#
+#     @pyqtSlot()
+#     def monitor_signal(self):
+#         
+#         loop_count = 0
+#         
+#         while self.__MONITOR_SIGNAL__ == True:
+#             loop_count += 1
+#             
+#             if loop_count == 5:
+#                 
+#                 signal_strength, FM_stereo, RDS_available, IF_bandwidth = self.tuner.get_signal_info('full')
+#                 self.SIGNAL_STRENGTH.emit(signal_strength)
+#                 self.SIGNAL_STATUS.emit([FM_stereo, RDS_available])
+#                 loop_count = 0
+#                 
+#                 if RDS_available == True:
+#                     RDS_data_dict = self.tuner.get_RDS_data(pause_time = 0, repeat = False)
+#                     self.RDS_DATA.emit(RDS_data_dict)
+#                 else:
+#                     pass
+#                     
+#             QApplication.processEvents()
+#             time.sleep(0.012)
         
     def tune_up_auto(self):
         
@@ -673,32 +726,30 @@ class TunerWorker(QObject):
         
     def tune_down_auto(self):
         
-        self.tuner.tune_step(mode = 'DOWN', step = 5)
+        self.tuner.tune_step(mode = 'DOWN', step = 10)
         self.FREQ.emit(self.tuner.FREQ)
         
     
-    def tune_up(self):
+    def tune_up(self, step=10):
         
-        self.tuner.tune_step(mode = 'UP', step = 5)
+        self.tuner.tune_step(mode = 'UP', step = step)
         self.FREQ.emit(self.tuner.FREQ)
     
     
-    def tune_down(self):
+    def tune_down(self, step=10):
         
-        self.tuner.tune_step(mode = 'DOWN', step = 5)
+        self.tuner.tune_step(mode = 'DOWN', step = step)
         self.FREQ.emit(self.tuner.FREQ)
         
         
     def seek_up(self,seek_sensitivity):
-        
-        #print(seek_sensitivity)
+
         self.tuner.seek(mode = 'UP', sens = seek_sensitivity)
         self.FREQ.emit(self.tuner.FREQ)
     
     
     def seek_down(self,seek_sensitivity):
-        
-        #print(seek_sensitivity)
+
         self.tuner.seek(mode = 'DOWN', sens = seek_sensitivity)
         self.FREQ.emit(self.tuner.FREQ)
 

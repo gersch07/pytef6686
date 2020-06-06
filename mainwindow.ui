@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>449</width>
+    <width>482</width>
     <height>340</height>
    </rect>
   </property>
@@ -30,7 +30,7 @@
    <widget class="QPushButton" name="SeekDown_Button">
     <property name="geometry">
      <rect>
-      <x>20</x>
+      <x>40</x>
       <y>250</y>
       <width>91</width>
       <height>31</height>
@@ -43,7 +43,7 @@
    <widget class="QPushButton" name="TuneDown_Button">
     <property name="geometry">
      <rect>
-      <x>120</x>
+      <x>140</x>
       <y>250</y>
       <width>91</width>
       <height>31</height>
@@ -56,7 +56,7 @@
    <widget class="QPushButton" name="TuneUp_Button">
     <property name="geometry">
      <rect>
-      <x>220</x>
+      <x>240</x>
       <y>250</y>
       <width>91</width>
       <height>31</height>
@@ -69,7 +69,7 @@
    <widget class="QPushButton" name="SeekUp_Button">
     <property name="geometry">
      <rect>
-      <x>320</x>
+      <x>340</x>
       <y>250</y>
       <width>91</width>
       <height>31</height>
@@ -88,11 +88,14 @@
       <height>31</height>
      </rect>
     </property>
+    <property name="digitCount">
+     <number>6</number>
+    </property>
    </widget>
    <widget class="QLabel" name="SeekDown_Label">
     <property name="geometry">
      <rect>
-      <x>20</x>
+      <x>40</x>
       <y>230</y>
       <width>91</width>
       <height>20</height>
@@ -108,7 +111,7 @@
    <widget class="QLabel" name="TuneDown_Label">
     <property name="geometry">
      <rect>
-      <x>120</x>
+      <x>140</x>
       <y>230</y>
       <width>91</width>
       <height>20</height>
@@ -124,7 +127,7 @@
    <widget class="QLabel" name="TuneUp_Label">
     <property name="geometry">
      <rect>
-      <x>220</x>
+      <x>240</x>
       <y>230</y>
       <width>91</width>
       <height>20</height>
@@ -140,7 +143,7 @@
    <widget class="QLabel" name="SeekUp_Label">
     <property name="geometry">
      <rect>
-      <x>320</x>
+      <x>340</x>
       <y>230</y>
       <width>91</width>
       <height>20</height>
@@ -156,7 +159,7 @@
    <widget class="QLabel" name="RDS_Ind_Label">
     <property name="geometry">
      <rect>
-      <x>370</x>
+      <x>440</x>
       <y>10</y>
       <width>31</width>
       <height>16</height>
@@ -172,8 +175,8 @@
    <widget class="QLabel" name="TP_Ind_Label">
     <property name="geometry">
      <rect>
-      <x>410</x>
-      <y>10</y>
+      <x>420</x>
+      <y>30</y>
       <width>31</width>
       <height>16</height>
      </rect>
@@ -188,7 +191,7 @@
    <widget class="QLCDNumber" name="Signal_dBuV_LCD">
     <property name="geometry">
      <rect>
-      <x>260</x>
+      <x>280</x>
       <y>10</y>
       <width>101</width>
       <height>31</height>
@@ -198,7 +201,7 @@
    <widget class="QLabel" name="Signal_Label">
     <property name="geometry">
      <rect>
-      <x>210</x>
+      <x>230</x>
       <y>10</y>
       <width>71</width>
       <height>16</height>
@@ -211,8 +214,8 @@
    <widget class="QLabel" name="Stereo_Ind_Label">
     <property name="geometry">
      <rect>
-      <x>370</x>
-      <y>30</y>
+      <x>400</x>
+      <y>10</y>
       <width>31</width>
       <height>16</height>
      </rect>
@@ -229,7 +232,7 @@
      <rect>
       <x>10</x>
       <y>110</y>
-      <width>431</width>
+      <width>461</width>
       <height>61</height>
      </rect>
     </property>
@@ -263,7 +266,7 @@
    <widget class="QLabel" name="TextFreq_label_3">
     <property name="geometry">
      <rect>
-      <x>200</x>
+      <x>230</x>
       <y>60</y>
       <width>71</width>
       <height>16</height>
@@ -297,7 +300,7 @@
    <widget class="QLabel" name="RDS_PS_QLabel">
     <property name="geometry">
      <rect>
-      <x>260</x>
+      <x>290</x>
       <y>60</y>
       <width>131</width>
       <height>21</height>
@@ -338,13 +341,36 @@
      <string>Seek sensitivity</string>
     </property>
    </widget>
+   <widget class="QLabel" name="TuneSteps_Label">
+    <property name="geometry">
+     <rect>
+      <x>280</x>
+      <y>180</y>
+      <width>111</width>
+      <height>16</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Tune steps</string>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="TuneSteps_Combo">
+    <property name="geometry">
+     <rect>
+      <x>370</x>
+      <y>180</y>
+      <width>83</width>
+      <height>21</height>
+     </rect>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>449</width>
+     <width>482</width>
      <height>28</height>
     </rect>
    </property>

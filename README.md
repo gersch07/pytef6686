@@ -1,6 +1,6 @@
 # Description and features of pyTEF6686
-* (Micro-) Python library for controlling TEF6686 FM/MW/LW/SW tuner module
-* Raspberry Pi only: application with graphical user interface based on pyqt including manual and automatic logging and bandscan modes 
+* tef6686_driver.py: (Micro-) Python library for controlling TEF6686 FM/MW/LW/SW tuner module
+* tef6686_tuner.py (Raspberry Pi only): application with graphical user interface based on pyqt, including manual, automatic logging and bandscan modes 
 
 ## 1. Currently implemented host devices:
 * ESP32 microcontroller running Micropython
@@ -13,11 +13,11 @@
 * Tuning (FM, MW, SW, LW; FM-OIRT is not yet implemented)
 * RDS decoding (PI, PS, AF, radio text)
 * Volume gain control
-* GUI: current FM IF filter bandwidth displayed
+* FM filter bandwidth control
+* GUI application: currently only FM-CCIR available
 
 ## 3. Ongoing work
-* Make bands other than FM accessible from application
-* FM filter bandwidth control
+* Make bands other than FM accessible from GUI application
 
 ## 4. Usage of the library
 * See example.py

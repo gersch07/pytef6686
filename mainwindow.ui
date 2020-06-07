@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>482</width>
-    <height>340</height>
+    <height>444</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,21 +17,21 @@
    <widget class="QLabel" name="TextFreq_label">
     <property name="geometry">
      <rect>
-      <x>10</x>
+      <x>20</x>
       <y>10</y>
       <width>81</width>
-      <height>16</height>
+      <height>21</height>
      </rect>
     </property>
     <property name="text">
-     <string>Frequency:</string>
+     <string>Frequency</string>
     </property>
    </widget>
    <widget class="QPushButton" name="SeekDown_Button">
     <property name="geometry">
      <rect>
       <x>40</x>
-      <y>250</y>
+      <y>360</y>
       <width>91</width>
       <height>31</height>
      </rect>
@@ -44,7 +44,7 @@
     <property name="geometry">
      <rect>
       <x>140</x>
-      <y>250</y>
+      <y>360</y>
       <width>91</width>
       <height>31</height>
      </rect>
@@ -57,7 +57,7 @@
     <property name="geometry">
      <rect>
       <x>240</x>
-      <y>250</y>
+      <y>360</y>
       <width>91</width>
       <height>31</height>
      </rect>
@@ -70,7 +70,7 @@
     <property name="geometry">
      <rect>
       <x>340</x>
-      <y>250</y>
+      <y>360</y>
       <width>91</width>
       <height>31</height>
      </rect>
@@ -82,10 +82,10 @@
    <widget class="QLCDNumber" name="Frequency_LCD">
     <property name="geometry">
      <rect>
-      <x>100</x>
-      <y>10</y>
-      <width>101</width>
-      <height>31</height>
+      <x>20</x>
+      <y>30</y>
+      <width>121</width>
+      <height>41</height>
      </rect>
     </property>
     <property name="digitCount">
@@ -96,7 +96,7 @@
     <property name="geometry">
      <rect>
       <x>40</x>
-      <y>230</y>
+      <y>340</y>
       <width>91</width>
       <height>20</height>
      </rect>
@@ -112,7 +112,7 @@
     <property name="geometry">
      <rect>
       <x>140</x>
-      <y>230</y>
+      <y>340</y>
       <width>91</width>
       <height>20</height>
      </rect>
@@ -128,7 +128,7 @@
     <property name="geometry">
      <rect>
       <x>240</x>
-      <y>230</y>
+      <y>340</y>
       <width>91</width>
       <height>20</height>
      </rect>
@@ -144,7 +144,7 @@
     <property name="geometry">
      <rect>
       <x>340</x>
-      <y>230</y>
+      <y>340</y>
       <width>91</width>
       <height>20</height>
      </rect>
@@ -159,8 +159,8 @@
    <widget class="QLabel" name="RDS_Ind_Label">
     <property name="geometry">
      <rect>
-      <x>440</x>
-      <y>10</y>
+      <x>430</x>
+      <y>40</y>
       <width>31</width>
       <height>16</height>
      </rect>
@@ -175,8 +175,8 @@
    <widget class="QLabel" name="TP_Ind_Label">
     <property name="geometry">
      <rect>
-      <x>420</x>
-      <y>30</y>
+      <x>430</x>
+      <y>70</y>
       <width>31</width>
       <height>16</height>
      </rect>
@@ -191,30 +191,30 @@
    <widget class="QLCDNumber" name="Signal_dBuV_LCD">
     <property name="geometry">
      <rect>
-      <x>280</x>
-      <y>10</y>
-      <width>101</width>
-      <height>31</height>
+      <x>220</x>
+      <y>30</y>
+      <width>111</width>
+      <height>41</height>
      </rect>
     </property>
    </widget>
    <widget class="QLabel" name="Signal_Label">
     <property name="geometry">
      <rect>
-      <x>230</x>
+      <x>220</x>
       <y>10</y>
       <width>71</width>
-      <height>16</height>
+      <height>21</height>
      </rect>
     </property>
     <property name="text">
-     <string>Signal:</string>
+     <string>Signal</string>
     </property>
    </widget>
    <widget class="QLabel" name="Stereo_Ind_Label">
     <property name="geometry">
      <rect>
-      <x>400</x>
+      <x>430</x>
       <y>10</y>
       <width>31</width>
       <height>16</height>
@@ -231,7 +231,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>110</y>
+      <y>150</y>
       <width>461</width>
       <height>61</height>
      </rect>
@@ -241,7 +241,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>90</y>
+      <y>130</y>
       <width>71</width>
       <height>16</height>
      </rect>
@@ -254,7 +254,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>60</y>
+      <y>90</y>
       <width>71</width>
       <height>16</height>
      </rect>
@@ -267,7 +267,7 @@
     <property name="geometry">
      <rect>
       <x>230</x>
-      <y>60</y>
+      <y>90</y>
       <width>71</width>
       <height>16</height>
      </rect>
@@ -280,7 +280,7 @@
     <property name="geometry">
      <rect>
       <x>90</x>
-      <y>60</y>
+      <y>90</y>
       <width>59</width>
       <height>21</height>
      </rect>
@@ -301,7 +301,7 @@
     <property name="geometry">
      <rect>
       <x>290</x>
-      <y>60</y>
+      <y>90</y>
       <width>131</width>
       <height>21</height>
      </rect>
@@ -321,9 +321,9 @@
    <widget class="QComboBox" name="SeekSensitivity_Combo">
     <property name="geometry">
      <rect>
-      <x>140</x>
-      <y>180</y>
-      <width>79</width>
+      <x>150</x>
+      <y>220</y>
+      <width>91</width>
       <height>23</height>
      </rect>
     </property>
@@ -332,9 +332,9 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>180</y>
+      <y>220</y>
       <width>111</width>
-      <height>16</height>
+      <height>21</height>
      </rect>
     </property>
     <property name="text">
@@ -344,10 +344,10 @@
    <widget class="QLabel" name="TuneSteps_Label">
     <property name="geometry">
      <rect>
-      <x>280</x>
-      <y>180</y>
-      <width>111</width>
-      <height>16</height>
+      <x>20</x>
+      <y>260</y>
+      <width>81</width>
+      <height>21</height>
      </rect>
     </property>
     <property name="text">
@@ -357,11 +357,99 @@
    <widget class="QComboBox" name="TuneSteps_Combo">
     <property name="geometry">
      <rect>
-      <x>370</x>
-      <y>180</y>
-      <width>83</width>
+      <x>150</x>
+      <y>260</y>
+      <width>91</width>
       <height>21</height>
      </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="IF_Bandwidth_Label">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>300</y>
+      <width>141</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>IF filter bandwidth</string>
+    </property>
+   </widget>
+   <widget class="QComboBox" name="IF_Bandwidth_Combo">
+    <property name="geometry">
+     <rect>
+      <x>150</x>
+      <y>300</y>
+      <width>91</width>
+      <height>21</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QDial" name="Volume_Dial">
+    <property name="geometry">
+     <rect>
+      <x>370</x>
+      <y>250</y>
+      <width>91</width>
+      <height>71</height>
+     </rect>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Volume_Dial_Label">
+    <property name="geometry">
+     <rect>
+      <x>370</x>
+      <y>225</y>
+      <width>91</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Volume gain</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Volume_Ind">
+    <property name="geometry">
+     <rect>
+      <x>290</x>
+      <y>300</y>
+      <width>91</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+    </property>
+   </widget>
+   <widget class="QLabel" name="FreqUnit_Label">
+    <property name="geometry">
+     <rect>
+      <x>150</x>
+      <y>45</y>
+      <width>81</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>MHz</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="SignalUnit_Label">
+    <property name="geometry">
+     <rect>
+      <x>340</x>
+      <y>45</y>
+      <width>81</width>
+      <height>21</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>dBµV</string>
     </property>
    </widget>
   </widget>

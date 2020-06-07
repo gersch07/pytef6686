@@ -16,7 +16,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtCore import *
 import PyQt5.uic as uic
 
-from TEF6686 import TEF6686
+from TEF6686_driver import TEF6686
 
 ####################################################################################################
 ####                                                                                            ####
@@ -402,8 +402,6 @@ class StationList_Window(QDialog, StationList_UI):
 class MainApp(QMainWindow,MainApp_UI):
     
     FREQ = pyqtSignal(int)
-    #SIGNAL_STRENGTH = pyqtSignal(float)
-    #SIGNAL_STATUS = pyqtSignal(list)
     SIGNAL_INFO = pyqtSignal(list)
     RDS_DATA = pyqtSignal(object)
     
@@ -422,7 +420,8 @@ class MainApp(QMainWindow,MainApp_UI):
         self.SCAN_LOCAL_ACTIVE = False
         self.MONITOR_ACTIVE = False
         self.RDS_BLOCK_DETECTED = False                               # check if at least one RDS block was detected in a specific time interval
-        
+        self.IF_BANDWIDTH_DICT = {'0': 560, '1': 640, '2': 720, '3': 840, '4': 970, '5': 1140, '6': 1330, '7': 1510, '8': 1680, '9': 1840, '10': 2000, '11': 2170, '12': 2360, '13': 2540, '14': 2870, '15': 3110}
+
         # Generate menu bar
         self.Menu = QMenuBar()
         self.setMenuBar(self.Menu)
@@ -430,7 +429,7 @@ class MainApp(QMainWindow,MainApp_UI):
         self.Menu_File = self.Menu.addMenu("File")
         self.Menu_InitTuner = QAction("Initialize tuner module", self)
         self.Menu_Quit = QAction("Quit", self)
-        self.Menu_Window = self.Menu.addMenu("Window")
+        self.Menu_Window = self.Menu.addMenu("Tools")
         self.Menu_StationList = QAction("Manual logging", self)
         self.Menu_DXMonitor = QAction("Automatic logging", self)
         
@@ -447,16 +446,21 @@ class MainApp(QMainWindow,MainApp_UI):
         self.Menu_Quit.triggered.connect(self.close_app)
         
         self.Menu_Window.addAction(self.Menu_StationList)
-        self.Menu_StationList.triggered.connect(self.show_station_list)
+        self.Menu_StationList.triggered.connect(self.show_manual_log)
         
         self.Menu_Window.addAction(self.Menu_DXMonitor)
-        self.Menu_DXMonitor.triggered.connect(self.show_DX_monitor)
+        self.Menu_DXMonitor.triggered.connect(self.show_auto_log)
         
-        # Connect buttons
+        # Connect input objects to functions
         self.SeekDown_Button.clicked.connect(self.seek_down)
         self.SeekUp_Button.clicked.connect(self.seek_up)
         self.TuneDown_Button.clicked.connect(self.tune_down)
         self.TuneUp_Button.clicked.connect(self.tune_up)
+        self.Volume_Dial.setMinimum(-59.9)
+        self.Volume_Dial.setMaximum(24.0)
+        self.Volume_Dial.setValue(0)                                 # default value: 0dB volume gain
+        self.Volume_Dial.valueChanged.connect(self.set_volume)
+        self.Volume_Ind.setText( str(self.Volume_Dial.value() ) + 'dB')
         
         # Create entries in "Seek sensitivity" combo
         self.SeekSensitivity_Combo.addItem('local')
@@ -471,7 +475,12 @@ class MainApp(QMainWindow,MainApp_UI):
         self.TuneSteps_Combo.addItem('500 kHz')
         self.TuneSteps_Combo.addItem('1 MHz')
         self.TuneSteps_Combo.setCurrentIndex(2)
-       
+        
+        # Create entries in "IF filter bandwidth" combo
+        self.IF_Bandwidth_Combo.addItem('auto')
+        for key in self.IF_BANDWIDTH_DICT.keys():
+            self.IF_Bandwidth_Combo.addItem(str(int(self.IF_BANDWIDTH_DICT[key]/10)) + ' kHz')
+
         # Start tuner thread
         self.tuner_thread = QThread()
         self.tuner_worker = TunerWorker()
@@ -479,31 +488,48 @@ class MainApp(QMainWindow,MainApp_UI):
         self.tuner_thread.start()
         
         # connect pyqtSignals
+        self.IF_Bandwidth_Combo.currentIndexChanged.connect( self.set_IF_bandwidth )
         self.tuner_worker.FREQ.connect(self.update_frequency)
         self.tuner_worker.RDS_DATA.connect(self.update_RDS)
         self.tuner_worker.SIGNAL_INFO.connect(self.update_signal_info)
         
         self.statusBar.showMessage('Tuner: DISCONNECTED')
         
+    
+    def set_volume(self):
         
-    def show_station_list(self):
+        self.Volume_Ind.setText( str(self.Volume_Dial.value() ) + ' dB' )
+        self.tuner_worker.tuner.set_volume_gain( self.Volume_Dial.value()*10 )
+        
+    
+    def set_IF_bandwidth(self):
+        
+        if self.IF_Bandwidth_Combo.currentIndex() == 0:
+            self.tuner_worker.tuner.set_IF_bandwidth('FM', 'auto', dbg = True)
+        elif self.IF_Bandwidth_Combo.currentIndex() > 0:
+            self.tuner_worker.tuner.set_IF_bandwidth('FM', self.IF_Bandwidth_Combo.currentIndex()-1, dbg = True )
+        else:
+            raise ValueError('Unsupported IF filter bandwidth chosen!')
+        
+        
+    def show_manual_log(self):
 
         try:
-            self.stationlist_window.show()                                           # try to open existing station list
+            self.manual_log_window.show()                                           # try to open existing station list
         except:
-            self.stationlist_window = StationList_Window(self)
-            self.stationlist_window.setWindowTitle('Station list')
-            self.stationlist_window.show()
+            self.manual_log_window = StationList_Window(self)
+            self.manual_log_window.setWindowTitle('Manual logging')
+            self.manual_log_window.show()
             
     
-    def show_DX_monitor(self):
+    def show_auto_log(self):
 
         try:
-            self.dx_monitor_window.show()                                           # try to open existing DX monitor
+            self.auto_log_window.show()                                           # try to open existing DX monitor
         except:
-            self.dx_monitor_window = DXMonitor_Window(self)
-            self.dx_monitor_window.setWindowTitle('DX monitor')
-            self.dx_monitor_window.show()
+            self.auto_log_window = DXMonitor_Window(self)
+            self.auto_log_window.setWindowTitle('Automatic logging')
+            self.auto_log_window.show()
     
     
     def closeEvent(self,event):
@@ -660,6 +686,7 @@ class TunerWorker(QObject):
         #
         self.FREQ.emit(self.tuner.FREQ)
         self.__MONITOR_SIGNAL__ = False
+        #self.tuner.set_IF_bandwidth('FM', 'auto', dbg = True)
         time.sleep(2)
         print("Starting signal monitor...")
         self.toggle_signal_monitor()
@@ -717,6 +744,7 @@ class TunerWorker(QObject):
 #                     
 #             QApplication.processEvents()
 #             time.sleep(0.012)
+        
         
     def tune_up_auto(self):
         

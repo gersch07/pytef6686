@@ -342,11 +342,12 @@ class TEF6686:
         self.FREQ = 8750
         self.BAND = 'FM'
         self.RF_LEVEL = 0
-        
+        self.IF_BANDWIDTH_DICT = {'0': 560, '1': 640, '2': 720, '3': 840, '4': 970, '5': 1140, '6': 1330, '7': 1510, '8': 1680, '9': 1840, '10': 2000, '11': 2170, '12': 2360, '13': 2540, '14': 2870, '15': 3110}
+ 
+        self.__RF_LVL_OFFSET__ = 8                                  # raw value when no signal is present
         self.__TUNER_FOUND__ = False
         self.__TUNER_STATUS__ = None
-        self.__RF_LVL_OFFSET__ = 8                                  # raw value when no signal is present
-        
+           
         #---------------------- RDS-specific variables ------------
         
         # public variables
@@ -598,7 +599,7 @@ class TEF6686:
                 TUNE_TO_BYTE_ARRAY += b'\x07\x21\x01\x01\x00\x01'
                 TUNE_TO_BYTE_ARRAY += self.FREQ.to_bytes(2, 'big')
     
-        elif BAND == 'OIRT' or BAND == 'LW':
+        elif BAND == 'OIRT':
             raise ValueError('Band not yet implemented!')
         else:
             raise ValueError('Please choose a valid band (FM/MW/LW/SW)"')
@@ -671,18 +672,43 @@ class TEF6686:
         
         print("Stopped seek at ", self.FREQ)
         return self.FREQ
+    
+    
+    def set_IF_bandwidth(self, BAND, BANDWIDTH_IND, dbg = False):                                  # BANDWIDTH can be 'auto' or the index of the bandwidth list
+        
+        if BAND == 'FM' and not BANDWIDTH_IND == 'auto':
+            
+            self.__BANDWIDTH__ = self.IF_BANDWIDTH_DICT[str(BANDWIDTH_IND)]
+            
+            if dbg == True:
+                print('Setting ', BAND, ' IF filter bandwidth to ', self.__BANDWIDTH__/10, ' kHz...')
+                
+            IF_BANDWIDTH_BYTE_ARRAY = b'\x0B\x20\x0A\x01\x00\x00'
+            IF_BANDWIDTH_BYTE_ARRAY += self.__BANDWIDTH__.to_bytes(2, byteorder = 'big', signed = False)
+            IF_BANDWIDTH_BYTE_ARRAY += b'\x03\xE8\x03\xE8'                                       # bandwidth control sensitivity (relative adjacent channel): 100% at normal and 100% at low signal levels
+            self.i2c_write_line(IF_BANDWIDTH_BYTE_ARRAY)    
+        
+        elif BAND == 'FM' and BANDWIDTH_IND == 'auto':
+                        
+            if dbg == True:
+                print('Setting ', BAND, ' IF filter bandwidth to automatic...')
+                
+            IF_BANDWIDTH_BYTE_ARRAY = b'\x0B\x20\x0A\x01\x00\x01\x09\x38\x03\xE8\x03\xE8'
+            self.i2c_write_line(IF_BANDWIDTH_BYTE_ARRAY)
+            
+        else:
+            print("Bandwidth options only available for FM!")
         
 
-    def set_volume_gain(self, VOLUME_GAIN = 0, dbg = False):                      # sets volume GAIN(!): -599 to +240 possible (default: 0)
+    def set_volume_gain(self, VOLUME_GAIN = 0, dbg = False):                                    # sets volume GAIN(!): -599 to +240 possible (default: 0)
         
         self.VOLUME_GAIN = VOLUME_GAIN
-        print("Setting volume to ", self.VOLUME_GAIN, "...")
-        VOL_BYTE_ARRAY = b''
-        VOL_BYTE_ARRAY += b'\x05\x30\x0A\x01'
-        VOL_BYTE_ARRAY += self.VOLUME_GAIN.to_bytes(2, byteorder = 'big', signed = True)
         
         if dbg == True:
-            print(VOL_BYTE_ARRAY)
+            print("Setting volume to ", self.VOLUME_GAIN, "...")
+        
+        VOL_BYTE_ARRAY = b'\x05\x30\x0A\x01'
+        VOL_BYTE_ARRAY += self.VOLUME_GAIN.to_bytes(2, byteorder = 'big', signed = True)
             
         self.i2c_write_line(VOL_BYTE_ARRAY)
         
